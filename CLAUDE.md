@@ -237,6 +237,7 @@ Every fixed bug earns a regression test.
 ## Commands
 
 ```bash
+docker compose up -d postgres    # local Postgres, port 5434 on the host
 npm install
 npm run dev              # turbo: web + api together
 npm test                 # turbo: vitest + pytest
@@ -244,6 +245,7 @@ npm run typecheck
 
 npm run test:e2e --workspace=web     # playwright
 cd apps/api && uv run pytest
+cd apps/api && uv run python seed.py     # populate crews and jobs for local dev
 ```
 
 ---

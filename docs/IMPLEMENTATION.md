@@ -116,16 +116,19 @@ check route.
 
 ### Phase 1 — Data model and GraphQL schema
 
-- [ ] SQLAlchemy models: `Crew`, `Job`, the `Job.crew_id` relation
-- [ ] A seed script with sample data (a few crews, jobs spread across 3
+- [x] SQLAlchemy models: `Crew`, `Job`, the `Job.crew_id` relation
+- [x] A seed script with sample data (a few crews, jobs spread across 3
       days, including at least one latent conflict to test against later)
-- [ ] Graphene types matching the models
-- [ ] A `board(dates: [Date!]!)` query returning crews and jobs
-- [ ] A DataLoader for `Job.crew` from the first resolver that needs one
+- [x] Graphene types matching the models
+- [x] A `board(dates: [Date!]!)` query returning crews and jobs
+- [x] A DataLoader for `Job.crew` from the first resolver that needs one
       (ADR-007 applies from Phase 1, it isn't a retrofit)
 
-Checks. The `board` query works in the local playground and returns the
-seeded data.
+Checks. The `board` query returns the seeded data, `crew` resolved through
+`CrewLoader` rather than the ORM. No GraphiQL UI yet, verified with `curl`
+and two pytest cases (`tests/test_board_query.py`) instead: one asserting
+the resolved shape, one asserting the date filter actually excludes a job
+outside the requested range.
 
 ### Phase 2 — Headless core (no UI)
 

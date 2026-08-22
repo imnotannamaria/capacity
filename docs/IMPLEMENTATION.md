@@ -71,6 +71,7 @@ onto a generic todo list.
 | Concurrency | Server decides, client rolls back, no WebSocket | ADR-006 |
 | N+1 | DataLoader on every list resolver, guarded by a query-count test | ADR-007 |
 | Logic boundary | `core/` (no JSX) split from `ui/` | ADR-008 |
+| Mutation validation | Pydantic in `services/`, not inline `if`/`raise` | ADR-009 |
 
 ## Decisions taken without asking, and why
 
@@ -103,12 +104,12 @@ dropping the keyboard path.
 
 ### Phase 0 — Scaffold
 
-- [ ] Root `package.json` with `workspaces: ["apps/*"]`, plus `turbo.json`
-- [ ] `apps/web`: Next.js 15 (App Router) + TypeScript strict + Tailwind v4
-- [ ] `apps/api`: Flask + Graphene + SQLAlchemy, `uv` for dependencies
-- [ ] Local Postgres (docker) for dev; Railway is deploy-only
-- [ ] `npm run dev` brings both apps up through turbo
-- [ ] Minimal CI: typecheck and lint on every push, no deploy yet
+- [x] Root `package.json` with `workspaces: ["apps/*"]`, plus `turbo.json`
+- [x] `apps/web`: Next.js 16 (App Router) + TypeScript strict + Tailwind v4
+- [x] `apps/api`: Flask + Graphene + SQLAlchemy, `uv` for dependencies
+- [x] Local Postgres (docker) for dev; Railway is deploy-only
+- [x] `npm run dev` brings both apps up through turbo
+- [x] Minimal CI: typecheck and lint on every push, no deploy yet
 
 Checks. `npm run dev` brings web and api up, each answering on a health
 check route.
@@ -154,7 +155,9 @@ drag interaction yet.
 - [ ] dnd-kit wired into the `JobBlock`s
 - [ ] Local collision pre-check while dragging, visual feedback before drop
 - [ ] The `moveJob(jobId, crewId, date, startTime)` mutation in the schema
-      (the server validates the conflict and returns `errors: [Error!]`)
+      (a thin resolver: parse input through a Pydantic model in
+      `services/`, per ADR-009, then check the conflict and return
+      `errors: [Error!]`)
 - [ ] The client calls the mutation on drop, no optimistic update yet
       (waits for the server, updates after)
 - [ ] Keyboard: move a job between crews of the same day with arrows and

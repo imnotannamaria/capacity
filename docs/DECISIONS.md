@@ -187,3 +187,44 @@ Dropped:
 
 Consequences: one more layer of organisation, but pure-logic tests run in
 milliseconds and don't break when a component's markup changes.
+
+---
+
+## ADR-009 — Pydantic for mutation input validation in `services/`
+
+Context: Graphene already validates the *shape* of a mutation's input, its
+types and nullability, before a resolver ever runs. It has no opinion on
+the *rules*: a `startTime` has to land on a 15-minute boundary, a `date`
+has to fall inside the 3 navigable days, a job can't end before it starts.
+Left unchecked, that validation either gets hand-rolled as `if`/`raise`
+inside each resolver, which drifts in shape from one mutation to the next,
+or skipped, which pushes a malformed value straight into SQLAlchemy.
+
+Decision: every mutation input is parsed through a Pydantic model in
+`services/` before it reaches the database. A validation failure becomes a
+structured entry in the mutation's `errors: [Error!]` payload (ADR-007's
+own rule: never a raw exception at GraphQL), not an exception that
+resolvers have to remember to catch.
+
+Dropped:
+- Hand-rolled validation per resolver. Works once, drifts every time a
+  second mutation needs the same rule (a 15-minute snap check written
+  twice is a bug waiting for the two copies to disagree).
+- Marshmallow. Weaker type-checker integration than Pydantic, and no
+  reason to carry two validation libraries when Pydantic already covers it.
+
+Consequences: one more dependency, but the validation rules become
+declarative and sit in one place per mutation, and the `errors` payload
+shape is consistent by construction rather than by convention.
+
+### Why not Zod on the client
+
+Considered and dropped, at least for now. Zod's job is validating
+untrusted input at a boundary, and `apps/web` doesn't have one yet: there
+are no forms, no login, and the GraphQL responses it reads are already
+shape-guaranteed by a schema shared between both apps in the same
+monorepo. Parsing an Apollo response through Zod on top of that would be
+validating a boundary that doesn't actually exist here, not a safety net
+against real drift. If a form or an external API call enters scope later,
+that's a new decision with its own reasoning, not a default to reach for
+because the backend has Pydantic.

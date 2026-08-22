@@ -19,7 +19,7 @@ follow while writing code here.
 
 | Layer | Tech |
 | --- | --- |
-| Framework (web) | Next.js 15 (App Router), React 19 |
+| Framework (web) | Next.js 16 (App Router), React 19 |
 | Language (web) | TypeScript, strict |
 | Data (client) | Apollo Client, normalised cache, optimistic updates |
 | Drag | @dnd-kit (not a hand-built engine, see ADR-002) |
@@ -28,6 +28,7 @@ follow while writing code here.
 | Framework (api) | Python 3.12, Flask |
 | GraphQL (api) | Graphene + graphene-sqlalchemy |
 | Data (api) | SQLAlchemy + Postgres |
+| Validation (api) | Pydantic, in `services/`, see ADR-009 |
 | Test (api) | pytest |
 | Monorepo | Turborepo + npm workspaces |
 | Deploy | Vercel (`apps/web`) + Railway (`apps/api` + Postgres) |
@@ -168,7 +169,8 @@ the collision test (and the auto-switch test) don't need a DOM to run.
   is a bug, not a TODO. The board is nested lists (jobs × crews ×
   customers), which is where N+1 turns 1 query into hundreds.
 - Thin resolvers: validate input, call a service, return. Business logic
-  lives in `services/`.
+  lives in `services/`. Validation means parsing the input through a
+  Pydantic model, not a hand-rolled `if`/`raise` (ADR-009).
 - The server is the source of truth on conflict. The client may predict;
   the server decides, always.
 - Mutations return a payload with `errors: [Error!]`, they never throw a
@@ -308,7 +310,10 @@ apply to the diff in front of you isn't a finding.
 - Mutation shape — mutations return a payload with `errors: [Error!]`
   and never throw a raw exception at GraphQL. The tell is a resolver that
   lets a SQLAlchemy `IntegrityError` reach the transport: it leaks a stack
-  and hands the client nothing structured to branch on.
+  and hands the client nothing structured to branch on. The tell one layer
+  up is business-rule validation that isn't a Pydantic model in
+  `services/` (ADR-009): an `if`/`raise` inline in a resolver is the kind
+  of check that quietly stops matching its twin in another mutation.
 - Accessibility — the keyboard drag path is a requirement, not a nicety
   (ADR-003). dnd-kit's keyboard sensor stays on, the cross-day shortcut
   works, and focus survives the tab auto-switch mid-drag instead of getting

@@ -132,13 +132,17 @@ outside the requested range.
 
 ### Phase 2 — Headless core (no UI)
 
-- [ ] `core/types.ts`: shared types (Job, Crew, TimeSlot)
-- [ ] `core/geometry.ts`: time to vertical position, 15-min snap
-- [ ] `core/collision.ts`: local conflict detection, the pre-check
-- [ ] Vitest for geometry and collision, edge cases included (a job on the
+- [x] `core/types.ts`: shared types (Job, Crew, TimeSlot)
+- [x] `core/geometry.ts`: time to vertical position, 15-min snap
+- [x] `core/collision.ts`: local conflict detection, the pre-check
+- [x] Vitest for geometry and collision, edge cases included (a job on the
       exact slot boundary, two adjacent jobs with no overlap)
 
-Checks. The `core/` suite passes with no React import anywhere in it.
+Checks. The `core/` suite passes with no React import anywhere in it. 21
+tests across the two files; conflict detection uses a half-open interval
+([start, start + duration)), so two adjacent jobs that touch at the
+boundary don't conflict, the same way two back-to-back calendar events
+don't.
 
 ### Phase 3 — Static UI (no drag yet)
 

@@ -38,6 +38,23 @@ export function durationToHeight(durationMinutes: number): number {
   return durationMinutes * PIXELS_PER_MINUTE
 }
 
+/** The inverse of minutesToPosition: pixels of vertical drag back to minutes. */
+export function positionToMinutes(pixels: number): number {
+  return pixels / PIXELS_PER_MINUTE
+}
+
+export const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR
+
+/**
+ * Keeps a dragged job's start time inside the visible day, so it can't
+ * end up with a negative start or run past midnight. Every crew column
+ * spans the same [0, MINUTES_PER_DAY) range, so this only needs the
+ * job's own duration, not which crew it's landing on.
+ */
+export function clampStartMinutes(startMinutes: number, durationMinutes: number): number {
+  return Math.min(Math.max(startMinutes, 0), MINUTES_PER_DAY - durationMinutes)
+}
+
 /**
  * Formats a `Date` as "YYYY-MM-DD" using its local year/month/day, then
  * re-anchors through `Date.UTC` before printing. `date.toISOString()`

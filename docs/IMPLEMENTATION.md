@@ -174,19 +174,44 @@ the app root instead of under `src/`; moved by hand, documented in the
 
 ### Phase 4 — Drag within the same day
 
-- [ ] dnd-kit wired into the `JobBlock`s
-- [ ] Local collision pre-check while dragging, visual feedback before drop
-- [ ] The `moveJob(jobId, crewId, date, startTime)` mutation in the schema
+- [x] dnd-kit wired into the `JobBlock`s
+- [x] Local collision pre-check while dragging, visual feedback before drop
+- [x] The `moveJob(jobId, crewId, date, startTime)` mutation in the schema
       (a thin resolver: parse input through a Pydantic model in
       `services/`, per ADR-009, then check the conflict and return
       `errors: [Error!]`)
-- [ ] The client calls the mutation on drop, no optimistic update yet
+- [x] The client calls the mutation on drop, no optimistic update yet
       (waits for the server, updates after)
-- [ ] Keyboard: move a job between crews of the same day with arrows and
+- [x] Keyboard: move a job between crews of the same day with arrows and
       space (dnd-kit's default)
 
-Checks. Dragging a job to another crew, same day, works end to end with
-mouse, touch, and keyboard, with a visible pause while the server confirms.
+Checks. Confirmed by hand in the browser for mouse and keyboard: a real
+drag moves a job to another crew, the `DragOverlay` ghost turns
+error-coloured while hovering a conflicting slot and back to normal once
+clear, and the block stays at its original position until the mutation's
+refetch lands — no optimistic jump yet, that's Phase 5. Reloading the page
+after each move confirmed the new crew/time persisted server-side, not
+just in Apollo's cache. Touch wasn't separately exercised (no touch
+emulation in this pass) beyond adding `touch-action: none` to the
+draggable, which PointerSensor needs to receive touch events at all; it
+rides the same PointerSensor path as mouse, but that's an assumption, not
+a checked box.
+
+Backend: 8 pytest cases for `moveJob` (success, rejected overlap,
+boundary-touching non-conflict, the 15-minute grid rule, job-not-found).
+The rejection path also asserts the row is untouched, not just that the
+payload carries an error.
+
+What actually slowed this phase down was not the app: it was the browser
+automation harness's synthetic key events. The `computer` tool's `key`
+action intermittently failed to trigger dnd-kit's keyboard sensor at all,
+and rapid-fire key dispatches with no delay between them sometimes
+coalesced into a net-zero move that silently hit the "nothing changed,
+skip the mutation" guard — both diagnosed by dispatching real
+`KeyboardEvent`/`PointerEvent` sequences via `javascript_exec` instead,
+with a small delay between each key. Neither issue reproduces for an
+actual human pressing keys at normal speed; noted here so a future replay
+of this Check doesn't mistake automation flakiness for an app bug.
 
 ### Phase 5 — Optimistic update and rollback
 

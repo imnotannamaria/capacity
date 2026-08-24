@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  clampStartMinutes,
   durationToHeight,
   formatDayLabel,
   getNavigableDates,
+  MINUTES_PER_DAY,
   minutesToPosition,
   minutesToTime,
+  positionToMinutes,
   snapToSlot,
   timeToMinutes,
   toISODate,
@@ -121,5 +124,25 @@ describe("formatDayLabel", () => {
   it("does not shift the date regardless of the host timezone", () => {
     expect(formatDayLabel("2026-01-01")).toBe("Thu, Jan 1")
     expect(formatDayLabel("2026-12-31")).toBe("Thu, Dec 31")
+  })
+})
+
+describe("positionToMinutes", () => {
+  it("is the inverse of minutesToPosition", () => {
+    expect(positionToMinutes(minutesToPosition(90))).toBe(90)
+  })
+})
+
+describe("clampStartMinutes", () => {
+  it("leaves an in-range value unchanged", () => {
+    expect(clampStartMinutes(540, 60)).toBe(540)
+  })
+
+  it("clamps a negative start to 0", () => {
+    expect(clampStartMinutes(-30, 60)).toBe(0)
+  })
+
+  it("clamps a start that would run past midnight", () => {
+    expect(clampStartMinutes(MINUTES_PER_DAY - 10, 60)).toBe(MINUTES_PER_DAY - 60)
   })
 })

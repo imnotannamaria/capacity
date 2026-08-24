@@ -31,3 +31,13 @@ class JobType(SQLAlchemyObjectType):
 class BoardType(graphene.ObjectType):
     crews = graphene.List(graphene.NonNull(CrewType), required=True)
     jobs = graphene.List(graphene.NonNull(JobType), required=True)
+
+
+class Error(graphene.ObjectType):
+    """Shared by every mutation payload (CLAUDE.md, "Mutation shape").
+    `message` is developer-facing text, safe to show in a toast — never a
+    raw exception string, which is how a stack trace or a connection
+    string would leak into a response.
+    """
+
+    message = graphene.String(required=True)

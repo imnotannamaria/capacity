@@ -1,39 +1,15 @@
 import { execSync } from "node:child_process"
 import path from "node:path"
 import { expect, test } from "@playwright/test"
-import { getNavigableDates } from "../src/scheduler/core/geometry"
+import { dates, fetchBoard, fetchJob } from "./helpers"
 
-const API_URL = "http://localhost:5001/graphql"
 const API_DIR = path.resolve(__dirname, "../../api")
-
-// Mirrors what page.tsx computes server-side, so the test knows which ISO
-// date each tab (by position) corresponds to without parsing rendered
-// labels — same reasoning as core/geometry.ts's own toISODate/UTC anchoring.
-const dates = getNavigableDates(new Date())
 
 test.beforeEach(() => {
   // Each test drags a different job (see below), but reseeding keeps
   // every test independent of what an earlier one in the run left behind.
   execSync("uv run python seed.py", { cwd: API_DIR, stdio: "ignore" })
 })
-
-async function fetchBoard(page: import("@playwright/test").Page) {
-  const response = await page.request.post(API_URL, {
-    data: {
-      query: `query { board(dates: ${JSON.stringify(dates)}) { crews { id name } jobs { title crewId date startTime } } }`,
-    },
-  })
-  const body = await response.json()
-  return body.data.board as {
-    crews: { id: string; name: string }[]
-    jobs: { title: string; crewId: string; date: string; startTime: string }[]
-  }
-}
-
-async function fetchJob(page: import("@playwright/test").Page, title: string) {
-  const board = await fetchBoard(page)
-  return board.jobs.find((job) => job.title === title)
-}
 
 test("drags a job to another day via mouse, hovering the tab to auto-switch", async ({ page }) => {
   await page.goto("/")

@@ -304,14 +304,45 @@ time.
 
 ### Phase 7 — Concurrency conflict (proven for real)
 
-- [ ] README steps: open two browser tabs, move a job into a slot in tab
+- [x] README steps: open two browser tabs, move a job into a slot in tab
       A, try to move another job into the same slot in tab B, watch the
       rejection and the rollback
-- [ ] A Playwright test with two browser contexts automating that
+- [x] A Playwright test with two browser contexts automating that
       scenario, not just the manual walkthrough
 
-Checks. The two-context test fails if the server's conflict check is
-removed or weakened.
+Checks. Confirmed directly, not assumed: temporarily hardcoded
+`conflict = None` in `move_job.py` (skipping `_find_conflict` entirely)
+and reran `concurrency-conflict.spec.ts` — it failed, on the "Move
+rejected" toast never appearing, exactly where a weakened server check
+should be caught. Reverted, reran, green again. `git diff` confirmed the
+revert left no trace.
+
+Two bugs the manual pass caught, neither an app bug:
+
+- Two spec files each reseed the database in `beforeEach`. With
+  Playwright's default multi-worker scheduling, two files' `beforeEach`
+  hooks ran concurrently against the same live Postgres, corrupting
+  state (a crew id fetched by one test belonged to a row a concurrent
+  reseed had already deleted). Fixed with `workers: 1` in
+  `playwright.config.ts` — these specs share an external database with
+  no per-worker isolation, so serializing across files isn't a
+  performance compromise, it's the only correct way to run them.
+- `dragJobTo` silently no-op'd on a job scheduled at 13:00 (780px from
+  the top of a day column). `boundingBox()` measured it correctly, but
+  the default 720px-tall viewport meant the point was below the fold,
+  so `page.mouse` never actually reached it. First fix attempt (setting
+  `viewport` in the config's top-level `use`) didn't take, because
+  `projects: [{ use: { ...devices["Desktop Chrome"] } }]` spreads in
+  its own 720px viewport afterward and wins; the working fix sets
+  `viewport: { width: 1280, height: 1600 }` inside that same project's
+  `use`, after the spread, tall enough to fit a full unscrolled day
+  column (1440px) plus its header.
+
+The reproduction lives in two places on purpose: `README.md` for someone
+reading by hand, `concurrency-conflict.spec.ts` for CI. `e2e/helpers.ts`
+picked up `dragJobTo`/`fetchBoard`/`fetchJob`, shared with
+`cross-day-drag.spec.ts` from Phase 6 now that a second spec needed the
+same plumbing.
 
 ### Phase 8 — N+1 and DataLoader (proven for real)
 

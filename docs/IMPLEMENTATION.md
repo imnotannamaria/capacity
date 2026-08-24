@@ -346,12 +346,26 @@ same plumbing.
 
 ### Phase 8 — N+1 and DataLoader (proven for real)
 
-- [ ] A pytest that counts the SQL queries fired resolving `board` with N
+- [x] A pytest that counts the SQL queries fired resolving `board` with N
       jobs, asserting a fixed number independent of N
-- [ ] Remove a DataLoader on purpose, confirm the test breaks, put it back
+- [x] Remove a DataLoader on purpose, confirm the test breaks, put it back
 
-Checks. The query-count test is in CI and fails reliably when a DataLoader
-is removed.
+Checks. Confirmed directly: `resolve_crew` swapped for a per-job query
+(bypassing `CrewLoader` entirely), `test_query_count.py` reran and failed
+at 5 queries for 3 jobs instead of the expected 3, with SQLAlchemy's
+`before_cursor_execute` event log showing the same `SELECT ... FROM
+crews WHERE crews.id = ...` statement fired three separate times.
+Reverted, reran, back to 3 queries for both 3 and 20 jobs. `git diff`
+confirmed the revert left no trace.
+
+The test asks for `job { crew { id name } } }` on purpose, which the
+frontend's actual board query never does (`Board` already has the full
+crews list and doesn't need it per job, see Phase 3) — nothing else in
+the app exercises `CrewLoader` at all, so this is the only thing that
+would ever catch a regression here. The fixed count is 3: one query for
+crews, one for jobs, one batched crew lookup regardless of job count —
+not 2, because `CrewLoader` still runs once even when nothing but the
+board query touches it.
 
 ### Phase 9 — Deploy and final polish
 

@@ -52,8 +52,8 @@ function Harness() {
     <div>
       <div data-testid="crew">{job.crewId}</div>
       <div data-testid="time">{job.startTime}</div>
-      {/* 660 minutes = 11:00, on crew-2 */}
-      <button type="button" onClick={() => moveJob(job, "crew-2", 660)}>
+      {/* 660 minutes = 11:00, on crew-2, same day */}
+      <button type="button" onClick={() => moveJob(job, "crew-2", job.date, 660)}>
         move
       </button>
     </div>

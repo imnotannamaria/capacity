@@ -15,11 +15,11 @@ import { MOVE_JOB_MUTATION, type MoveJobData, type MoveJobVariables } from "./mu
 export function useMoveJob() {
   const [moveJobMutation] = useMutation<MoveJobData, MoveJobVariables>(MOVE_JOB_MUTATION)
 
-  return function moveJob(job: Job, newCrewId: string, newStartMinutes: number) {
+  return function moveJob(job: Job, newCrewId: string, newDate: string, newStartMinutes: number) {
     const newStartTime = minutesToTime(newStartMinutes)
 
     return moveJobMutation({
-      variables: { jobId: job.id, crewId: newCrewId, date: job.date, startTime: newStartTime },
+      variables: { jobId: job.id, crewId: newCrewId, date: newDate, startTime: newStartTime },
       // The block jumps immediately. If the server rejects the move,
       // Apollo discards this optimistic layer once the real response
       // lands; since a rejection's `job` is null (ADR-006, ADR-009), the
@@ -34,7 +34,7 @@ export function useMoveJob() {
             id: job.id,
             crewId: newCrewId,
             title: job.title,
-            date: job.date,
+            date: newDate,
             startTime: newStartTime,
             durationMinutes: job.durationMinutes,
           },

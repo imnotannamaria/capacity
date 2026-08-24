@@ -258,24 +258,49 @@ Pays off ADR-003 in full. Highest-risk phase in the project. If scope has
 to be cut, re-argue it here first in `docs/DECISIONS.md`, don't silence
 the gap.
 
-- [ ] `core/dragAutoSwitch.ts`: the pure threshold logic (pointer over an
+- [x] `core/dragAutoSwitch.ts`: the pure threshold logic (pointer over an
       inactive tab for X ms triggers an active-tab change, no drop)
-- [ ] Vitest for the threshold: a short hover doesn't switch, a long hover
+- [x] Vitest for the threshold: a short hover doesn't switch, a long hover
       switches, moving the pointer away before the threshold cancels
-- [ ] Wiring in `DayTabs.tsx`: dnd-kit's `onDragMove` feeds
-      `dragAutoSwitch`, and the tab change re-renders the right day with
-      the drag still in flight
-- [ ] The keyboard shortcut for switching day with the job picked up
-      (candidate: `Tab`/`Shift+Tab`). If the final choice diverges from
-      ADR-003's candidate, record it in `docs/DECISIONS.md`
-- [ ] `moveJob` already accepts `date` (should be done in Phase 1). Confirm
-      the conflict is checked against the destination day, not the origin
-- [ ] Playwright: cross-day via mouse (auto-switch) and cross-day via
+- [x] Wiring feeds `dragAutoSwitch` from `onDragMove` and re-renders the
+      right day with the drag still in flight — it lives in `Board.tsx`,
+      not `DayTabs.tsx` as first sketched: `Board` already owns every
+      other piece of drag state (`activeJob`, `dragConflict`), and a tab
+      switch changes what `moveJob` sends as the destination `date`,
+      which only `Board` computes
+- [x] Tab/Shift+Tab switches the active day with a job picked up, mouse
+      or keyboard drag alike — confirms ADR-003's candidate, with a catch
+      the plan hadn't anticipated: `Tab` is already one of dnd-kit's own
+      default codes for *ending* a keyboard drag, so it had to be
+      removed from `KeyboardSensor`'s `keyboardCodes.end` first, or every
+      switch attempt would have dropped the job instead
+- [x] `moveJob` already accepted `date` (done in Phase 1) — Phase 4/5 were
+      just sending `job.date` (the origin) instead of the tab currently
+      showing. Fixed by sending `activeDate`, the one piece of state that
+      always reflects wherever the drag currently is, mouse or keyboard
+- [x] Playwright: cross-day via mouse (auto-switch) and cross-day via
       keyboard, both paths, not just one
 
-Checks. A job created on day 1 can move to day 3 by mouse (hovering the
-tab) and by keyboard, with the conflict checked against the right day in
-both cases.
+Checks. A job moves from day 1 to day 2 by mouse (hovering the tab) and
+from day 1 to day 3 by keyboard, both confirmed twice over: by hand in the
+browser (checking the database after each move, not just what the screen
+showed) and by two Playwright specs (`e2e/cross-day-drag.spec.ts`) that
+reseed the database before each run and query the API directly rather
+than trust the DOM. The keyboard spec also *is* the destination-day
+conflict check: it drags a job two days forward onto a slot that's only
+occupied on the destination day, and asserts the origin day's row never
+changed.
+
+Two real dnd-kit behaviours surfaced building this, both documented in
+ADR-003 rather than repeated here: the default collision strategy
+picking a crew column under a tab because it compares whole-block rects,
+not pointer position (fixed with `pointerWithin`, falling back to
+`rectIntersection` for keyboard drags, which have no pointer position at
+all); and `over` lagging one pointer-move event behind the true
+collision, which affected the Playwright test the exact same way it
+affected manual browser testing before the fix — one deliberate
+follow-up move after arriving at the target, not a real app bug either
+time.
 
 ### Phase 7 — Concurrency conflict (proven for real)
 

@@ -26,3 +26,11 @@ export type TimeSlot = {
   startMinutes: number
   durationMinutes: number
 }
+
+/**
+ * What a dnd-kit droppable is, attached as its `data`. Two kinds share
+ * the same drag: a crew column (a valid place to drop a job) and a day
+ * tab (never a drop target, only where core/dragAutoSwitch.ts watches
+ * for a hover long enough to switch days, see ADR-003).
+ */
+export type DroppableData = { type: "crew"; crewId: string } | { type: "tab"; date: string }

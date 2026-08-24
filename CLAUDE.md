@@ -69,11 +69,13 @@ day's columns. The drag stays in flight; the job is never dropped.
 
 This has a direct consequence for the keyboard. dnd-kit already handles
 arrow-key movement inside the active day, but switching days *during* a
-keyboard-driven drag is not built in. It needs an explicit shortcut
-(candidate: `Tab`/`Shift+Tab` while the job is "picked up") that switches
-the active tab without dropping the job. Without it, the board is
-draggable by mouse and touch but not by keyboard across days, which is
-exactly the gap this project exists to avoid.
+keyboard-driven drag is not built in — worse, `Tab` is one of dnd-kit's
+own default codes for *ending* a keyboard drag, so using it for anything
+else means overriding `KeyboardSensor`'s `keyboardCodes` first (see
+`Board.tsx`). With that override in place, `Tab`/`Shift+Tab` while the job
+is "picked up" switches the active tab without dropping the job. Without
+it, the board is draggable by mouse and touch but not by keyboard across
+days, which is exactly the gap this project exists to avoid.
 
 See ADR-003 in `docs/DECISIONS.md` for the alternative that was dropped
 (stacked days) and why this extra complexity was taken on purpose.

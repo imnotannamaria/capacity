@@ -1,11 +1,14 @@
 import { useDroppable } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
 import { durationToHeight, MINUTES_PER_DAY } from "../core/geometry"
-import type { Crew, Job } from "../core/types"
+import type { Crew, DroppableData, Job } from "../core/types"
 import { JobBlock } from "./JobBlock"
 
 export function CrewColumn({ crew, jobs }: { crew: Crew; jobs: Job[] }) {
-  const { setNodeRef, isOver } = useDroppable({ id: crew.id })
+  const { setNodeRef, isOver } = useDroppable({
+    id: crew.id,
+    data: { type: "crew", crewId: crew.id } satisfies DroppableData,
+  })
 
   return (
     <div className="flex min-w-[180px] flex-1 flex-col border-r border-[var(--border-subtle)] last:border-r-0">

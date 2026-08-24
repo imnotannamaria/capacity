@@ -86,6 +86,35 @@ Consequences taken on, eyes open:
 - Playwright gets one more scenario: hovering a tab for the minimum time,
   plus the keyboard equivalent.
 
+Confirmed in Phase 6, with three things the plan hadn't anticipated:
+
+- `Tab` is already one of dnd-kit's own default codes for *ending* a
+  keyboard drag (same set as Space/Enter). Using it for day-switching
+  needed `KeyboardSensor`'s `keyboardCodes.end` overridden to drop `Tab`
+  first, or every switch attempt would have dropped the job instead.
+- Dropping a job onto a tab has to be treated the same as dropping it on
+  nothing: a tab is a hover target for the auto-switch timer, never a
+  valid destination on its own. `Board.tsx`'s drop handler checks the
+  droppable's `data.type`, not just whether `over` is set.
+- Tabs are candidates for collision the SAME way crew columns are (both
+  are `useDroppable` targets, disambiguated by `data.type`), which
+  surfaced a real dnd-kit quirk two ways:
+  - The default collision strategy, `rectIntersection`, compares the
+    whole dragged block's rect against each droppable, and a 120px job
+    block still overlaps its own 1440px crew column far more than the
+    40px-tall tab it's passing over — the tab would never win. Fixed with
+    `pointerWithin` (checks the actual pointer position), but that
+    reads nothing for a keyboard drag (no pointer coordinates exist), so
+    the final collision detection tries `pointerWithin` first and falls
+    back to `rectIntersection` when it finds nothing — pointer accuracy
+    for mouse and touch, rect-based fallback for keyboard.
+  - `over` lags one pointer-move event behind the true collision. A
+    single `move-to-target` still reports the *previous* droppable; a
+    real mouse settling in place naturally sends a few more micro-moves
+    that flush it, but a scripted single move (in both a hand-rolled
+    browser check and the first cut of the Playwright test) doesn't. Both
+    were fixed the same way: one deliberate follow-up move after arriving.
+
 ---
 
 ## ADR-004 — No authentication in v1

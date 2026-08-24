@@ -11,6 +11,11 @@ apps/web/out/
 apps/web/next-env.d.ts
 *.tsbuildinfo
 
+# playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+
 # python
 __pycache__/
 *.pyc

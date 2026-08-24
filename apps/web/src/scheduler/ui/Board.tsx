@@ -11,7 +11,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core"
-import { useMutation, useQuery } from "@apollo/client/react"
+import { useQuery } from "@apollo/client/react"
 import { useState } from "react"
 import { Skeleton } from "@/components/entrepta/skeleton"
 import { cn } from "@/lib/utils"
@@ -26,7 +26,7 @@ import {
 import { hasConflict } from "../core/collision"
 import type { Job } from "../core/types"
 import { BOARD_QUERY, type BoardQueryData, type BoardQueryVariables } from "../data/queries"
-import { MOVE_JOB_MUTATION, type MoveJobData, type MoveJobVariables } from "../data/mutations"
+import { useMoveJob } from "../data/use-move-job"
 import { DayTabs } from "./DayTabs"
 
 function DragPreview({ job, conflict }: { job: Job; conflict: boolean }) {
@@ -54,9 +54,7 @@ export function Board({ dates }: { dates: string[] }) {
     variables: { dates },
   })
 
-  const [moveJob] = useMutation<MoveJobData, MoveJobVariables>(MOVE_JOB_MUTATION, {
-    refetchQueries: [{ query: BOARD_QUERY, variables: { dates } }],
-  })
+  const moveJob = useMoveJob()
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -108,17 +106,7 @@ export function Board({ dates }: { dates: string[] }) {
       return
     }
 
-    // No optimistic update yet (Phase 5): the block stays where it was
-    // until refetchQueries brings back the server's answer, conflict or
-    // not — the pause here is deliberate, not a missing feature.
-    void moveJob({
-      variables: {
-        jobId: job.id,
-        crewId: newCrewId,
-        date: job.date,
-        startTime: minutesToTime(newStartMinutes),
-      },
-    })
+    void moveJob(job, newCrewId, newStartMinutes)
   }
 
   if (loading) {

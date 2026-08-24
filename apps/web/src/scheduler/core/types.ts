@@ -1,9 +1,11 @@
 export type Crew = {
+  __typename?: "CrewType"
   id: string
   name: string
 }
 
 export type Job = {
+  __typename?: "JobType"
   id: string
   crewId: string
   title: string

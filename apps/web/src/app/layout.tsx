@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { ApolloWrapper } from "@/components/apollo-provider"
+import { Toaster } from "@/components/entrepta/toast"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <ApolloWrapper>{children}</ApolloWrapper>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   )

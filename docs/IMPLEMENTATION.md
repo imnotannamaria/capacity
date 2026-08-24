@@ -203,7 +203,7 @@ The rejection path also asserts the row is untouched, not just that the
 payload carries an error.
 
 What actually slowed this phase down was not the app: it was the browser
-automation harness's synthetic key events. The `computer` tool's `key`
+automation tool's synthetic key events. The `computer` tool's `key`
 action intermittently failed to trigger dnd-kit's keyboard sensor at all,
 and rapid-fire key dispatches with no delay between them sometimes
 coalesced into a net-zero move that silently hit the "nothing changed,
@@ -215,16 +215,42 @@ of this Check doesn't mistake automation flakiness for an app bug.
 
 ### Phase 5 — Optimistic update and rollback
 
-- [ ] `optimisticResponse` on the `moveJob` mutation
-- [ ] The UI moves the job immediately on drop
-- [ ] The error path: server rejects, Apollo undoes it, the job returns to
+- [x] `optimisticResponse` on the `moveJob` mutation
+- [x] The UI moves the job immediately on drop
+- [x] The error path: server rejects, Apollo undoes it, the job returns to
       its original place
-- [ ] An error toast explaining the rejection, no layout shift
-- [ ] `MockedProvider` tests: loading, error, optimistic, rollback, all
+- [x] An error toast explaining the rejection, no layout shift
+- [x] `MockedProvider` tests: loading, error, optimistic, rollback, all
       four states, not just the happy path
 
-Checks. The rollback test passes. Force a server rejection and confirm the
-UI returns to its prior state without freezing.
+Checks. Confirmed in the browser, not just in tests: dragging a job onto an
+occupied slot round-trips fast enough locally that a single screenshot
+already shows the rollback complete and the toast up ("Move rejected —
+Conflicts with 'Downtown loft move'"), with the block back at its original
+position. A conflict-free drag was confirmed to produce exactly one
+network request (the mutation, plus its CORS preflight) — no follow-up
+board refetch, confirming the win from this phase: the mutation's own
+response, normalized into the cache by id, is what moves the block, both
+on the optimistic write and on the real one.
+
+The rollback needed no rollback code. `moveJob`'s optimistic layer writes
+new `crewId`/`startTime` onto the `Job` entity; the real response, on
+rejection, returns `job: null` (ADR-006, ADR-009's validation-as-data
+pattern) — nothing to write over that entity — and Apollo discards the
+optimistic layer the moment any real response lands, optimistic or not.
+The "rollback" is the absence of a write, not a written-back value.
+
+The `moveJob` call moved out of `Board.tsx` into `data/use-move-job.ts`,
+not for reuse but for testability: dnd-kit's collision detection needs
+real layout (`getBoundingClientRect`, `ResizeObserver`, pointer capture),
+none of which jsdom provides, so a real drag gesture can't be driven from
+Vitest. The four `MockedProvider` states are tested by calling the
+extracted hook directly from a small harness component and asserting on
+what the cache renders — no drag gesture involved, and none needed to
+prove the optimistic/rollback contract. `MockedProvider` requires exactly
+one child (`React.Children.only`); `<Toaster />` and the harness had to
+share a `<>...</>` fragment, not sit as two siblings, or the whole tree
+silently fails to render with no error in the console.
 
 ### Phase 6 — Cross-day drag (auto-switch and keyboard)
 

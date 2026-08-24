@@ -21,8 +21,9 @@ export const MOVE_JOB_MUTATION = gql`
 
 export type MoveJobData = {
   moveJob: {
+    __typename?: "MoveJobPayload"
     job: Job | null
-    errors: { message: string }[]
+    errors: { __typename?: "Error"; message: string }[]
   }
 }
 

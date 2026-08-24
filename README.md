@@ -1,10 +1,21 @@
 # capacity
 
-A dispatch board built to prove one thing end to end: what happens when
-the server, not the client, decides who gets a scheduling slot. See
-[docs/GOAL.md](docs/GOAL.md) for what this project is and why it exists,
+A small dispatch board: crews and trucks as columns, jobs scheduled
+inside time windows, draggable between crews and between days. Built to
+prove one thing end to end: what happens when the server, not the
+client, decides who gets a scheduling slot, and the client actually
+recovers when it guessed wrong.
+
+It's a personal project, not a product. See [docs/GOAL.md](docs/GOAL.md)
+for what it's for and why moving-company dispatch is the example domain,
 and [docs/DECISIONS.md](docs/DECISIONS.md) for the architectural
-reasoning behind it.
+reasoning, alternative approaches dropped, and why.
+
+## Stack
+
+Next.js, Apollo Client, and dnd-kit on the frontend; Flask, Graphene, and
+SQLAlchemy on Postgres for the API. The full breakdown, folder structure,
+and the rules the code follows live in [CLAUDE.md](CLAUDE.md).
 
 ## Running locally
 
@@ -15,8 +26,17 @@ cd apps/api && uv run python seed.py && cd ../..
 npm run dev
 ```
 
-The board opens at http://localhost:3000. See [CLAUDE.md](CLAUDE.md) for
-the full command reference (tests, typecheck, linting, Playwright).
+The board opens at http://localhost:3000.
+
+## Testing
+
+```bash
+npm test                             # vitest + pytest
+npm run test:e2e --workspace=web     # playwright
+```
+
+The full pyramid, what each layer covers, and the five non-negotiable
+tests are documented in CLAUDE.md's [Tests](CLAUDE.md#tests) section.
 
 ## Reproducing the concurrency conflict
 

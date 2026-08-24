@@ -51,16 +51,16 @@ lives in `docs/DECISIONS.md`.
 
 ## How to know it worked
 
-- [ ] The board loads with 3 days as tabs, each tab with crew columns and
+- [x] The board loads with 3 days as tabs, each tab with crew columns and
       jobs positioned at the right time.
-- [ ] Dragging a job within the same day works with mouse, touch, and
+- [x] Dragging a job within the same day works with mouse, touch, and
       keyboard.
-- [ ] Dragging a job to another day works through tab auto-switch (hover)
+- [x] Dragging a job to another day works through tab auto-switch (hover)
       and through a keyboard shortcut, with both routes reaching the same
       result.
-- [ ] The server rejects a real schedule conflict and the client undoes
+- [x] The server rejects a real schedule conflict and the client undoes
       the change visibly, without freezing or flickering the screen.
-- [ ] A test fails automatically if anyone removes a DataLoader from the
+- [x] A test fails automatically if anyone removes a DataLoader from the
       board's query path.
-- [ ] An end-to-end test with two browser contexts reproduces and resolves
+- [x] An end-to-end test with two browser contexts reproduces and resolves
       the concurrency conflict with no manual intervention.

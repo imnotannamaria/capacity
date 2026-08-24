@@ -191,11 +191,12 @@ error-coloured while hovering a conflicting slot and back to normal once
 clear, and the block stays at its original position until the mutation's
 refetch lands — no optimistic jump yet, that's Phase 5. Reloading the page
 after each move confirmed the new crew/time persisted server-side, not
-just in Apollo's cache. Touch wasn't separately exercised (no touch
-emulation in this pass) beyond adding `touch-action: none` to the
-draggable, which PointerSensor needs to receive touch events at all; it
-rides the same PointerSensor path as mouse, but that's an assumption, not
-a checked box.
+just in Apollo's cache. Touch wasn't separately exercised in this phase
+(no touch emulation in this pass) beyond adding `touch-action: none` to
+the draggable, which PointerSensor needs to receive touch events at all —
+closed properly in Phase 9 with `e2e/touch-drag.spec.ts`, dispatching real
+`pointerType: "touch"` events rather than assuming the mouse path covers
+it.
 
 Backend: 8 pytest cases for `moveJob` (success, rejected overlap,
 boundary-touching non-conflict, the 15-minute grid rule, job-not-found).
@@ -371,14 +372,32 @@ board query touches it.
 
 - [ ] Deploy `apps/web` to Vercel
 - [ ] Deploy `apps/api` + Postgres to Railway (ADR-005)
-- [ ] A README covering what the project is, how to run it locally, how to
+- [x] A README covering what the project is, how to run it locally, how to
       reproduce the concurrency conflict (Phase 7), and links to
       `docs/GOAL.md` and `docs/DECISIONS.md`
-- [ ] Final pass: every "How to know it worked" item in `docs/GOAL.md` is
+- [x] Final pass: every "How to know it worked" item in `docs/GOAL.md` is
       ticked
 
+Deploy is deliberately left undone here, not skipped by oversight: it
+needs real Vercel/Railway accounts and live decisions (env vars, which
+plan, whether to spend money) that aren't mine to make alone. Everything
+that doesn't need someone else's account is done.
+
+The `docs/GOAL.md` pass caught a real gap instead of rubber-stamping the
+list: "works with mouse, touch, and keyboard" had never actually been
+checked for touch. Phase 4's own notes said so explicitly. Closed it here
+with `e2e/touch-drag.spec.ts`, dispatching genuine `pointerType: "touch"`
+pointer events rather than assuming the mouse path covers it, since
+dnd-kit's `PointerSensor` branches on that field. First attempt failed
+for a familiar reason: firing all five events in one `page.evaluate` call
+gave React no chance to flush state between them, and the drag silently
+no-op'd, the same one-event lag ADR-003 documents for the mouse path. The
+fix was mechanical, one `page.evaluate` per event with a real wait
+between them, not a change to the app.
+
 Checks. Someone from outside can clone it, run it locally, and reproduce
-the documented scenarios without asking anything.
+the documented scenarios without asking anything, short of deploying it
+themselves.
 
 ---
 

@@ -37,3 +37,48 @@ export function minutesToPosition(minutes: number): number {
 export function durationToHeight(durationMinutes: number): number {
   return durationMinutes * PIXELS_PER_MINUTE
 }
+
+/**
+ * Formats a `Date` as "YYYY-MM-DD" using its local year/month/day, then
+ * re-anchors through `Date.UTC` before printing. `date.toISOString()`
+ * alone would read the date back through UTC, which silently shifts to
+ * the previous day for anyone west of UTC after local midnight.
+ */
+export function toISODate(date: Date): string {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const day = date.getDate()
+  return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10)
+}
+
+/**
+ * `days` consecutive ISO dates starting at `referenceDate`'s local
+ * calendar day. Takes the "now" as a parameter instead of calling
+ * `new Date()` itself, so the one non-deterministic call happens once,
+ * server-side (see `page.tsx`), and every date after that is a plain
+ * string passed down as a prop, never recomputed on the client.
+ */
+export function getNavigableDates(referenceDate: Date, days = 3): string[] {
+  const year = referenceDate.getFullYear()
+  const month = referenceDate.getMonth()
+  const day = referenceDate.getDate()
+
+  return Array.from({ length: days }, (_, index) =>
+    new Date(Date.UTC(year, month, day + index)).toISOString().slice(0, 10),
+  )
+}
+
+/**
+ * "Mon, Aug 24" from an ISO date. Parses and formats both in UTC, so the
+ * label always matches the literal string regardless of the reader's
+ * timezone — the same trap `toISODate` guards against, in reverse.
+ */
+export function formatDayLabel(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00Z`)
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date)
+}

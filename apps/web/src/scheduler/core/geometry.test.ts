@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest"
 
 import {
   durationToHeight,
+  formatDayLabel,
+  getNavigableDates,
   minutesToPosition,
   minutesToTime,
   snapToSlot,
   timeToMinutes,
+  toISODate,
 } from "./geometry"
 
 describe("timeToMinutes", () => {
@@ -62,5 +65,61 @@ describe("minutesToPosition and durationToHeight", () => {
   it("map zero to zero", () => {
     expect(minutesToPosition(0)).toBe(0)
     expect(durationToHeight(0)).toBe(0)
+  })
+})
+
+describe("toISODate", () => {
+  it("formats a plain date", () => {
+    expect(toISODate(new Date(2026, 0, 15))).toBe("2026-01-15")
+  })
+
+  it("zero-pads single-digit months and days", () => {
+    expect(toISODate(new Date(2026, 2, 5))).toBe("2026-03-05")
+  })
+
+  it("rolls over correctly at a month boundary", () => {
+    expect(toISODate(new Date(2026, 0, 31))).toBe("2026-01-31")
+  })
+})
+
+describe("getNavigableDates", () => {
+  it("returns 3 consecutive days by default, starting at the reference date", () => {
+    expect(getNavigableDates(new Date(2026, 0, 15))).toEqual([
+      "2026-01-15",
+      "2026-01-16",
+      "2026-01-17",
+    ])
+  })
+
+  it("rolls over into the next month", () => {
+    expect(getNavigableDates(new Date(2026, 0, 30))).toEqual([
+      "2026-01-30",
+      "2026-01-31",
+      "2026-02-01",
+    ])
+  })
+
+  it("rolls over into the next year", () => {
+    expect(getNavigableDates(new Date(2026, 11, 31))).toEqual([
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02",
+    ])
+  })
+
+  it("respects a custom day count", () => {
+    expect(getNavigableDates(new Date(2026, 0, 15), 1)).toEqual(["2026-01-15"])
+  })
+})
+
+describe("formatDayLabel", () => {
+  it("formats an ISO date as a short weekday and month", () => {
+    // 2026-08-24 is a Monday.
+    expect(formatDayLabel("2026-08-24")).toBe("Mon, Aug 24")
+  })
+
+  it("does not shift the date regardless of the host timezone", () => {
+    expect(formatDayLabel("2026-01-01")).toBe("Thu, Jan 1")
+    expect(formatDayLabel("2026-12-31")).toBe("Thu, Dec 31")
   })
 })

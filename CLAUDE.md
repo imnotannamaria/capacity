@@ -104,11 +104,18 @@ capacity/
 │   └── IMPLEMENTATION.md
 ├── apps/
 │   ├── web/
+│   │   ├── entrepta.json                # entrepta CLI config (theme, aliases)
 │   │   └── src/
 │   │       ├── app/
+│   │       ├── components/
+│   │       │   ├── entrepta/            # copied in by the entrepta CLI, owned code
+│   │       │   └── apollo-provider.tsx
+│   │       ├── lib/
+│   │       │   ├── utils.ts                 # cn(), from entrepta
+│   │       │   └── apollo-client.ts
 │   │       ├── scheduler/
 │   │       │   ├── core/                # no JSX, pure logic, testable with no DOM
-│   │       │   │   ├── geometry.ts          # time ↔ vertical position, snap
+│   │       │   │   ├── geometry.ts          # time ↔ vertical position, snap, day maths
 │   │       │   │   ├── collision.ts         # local conflict, pre-check
 │   │       │   │   ├── dragAutoSwitch.ts    # hover threshold, tab switch
 │   │       │   │   └── types.ts
@@ -163,14 +170,26 @@ the collision test (and the auto-switch test) don't need a DOM to run.
 - dnd-kit covers mouse and touch, and the keyboard movement it already
   gives (arrows to move, space to confirm) stays on, don't disable it.
   The cross-day keyboard shortcut is mandatory, not optional (ADR-003).
+- `components/entrepta/` is owned code, copied in by `npx @entrepta/cli`,
+  not an installed package. Edit a component directly when it needs to
+  change; don't wrap or override it from outside.
+- The entrepta CLI defaults to a Pages Router layout (`components/`,
+  `lib/`, `styles/` at the app root). This project uses `src/`, so
+  anything the CLI adds lands in the wrong place and has to move into
+  `src/` by hand before it'll resolve through the `@/*` alias.
 
 ### `apps/api`
 - Every list resolver uses a DataLoader. A resolver that queries per item
-  is a bug, not a TODO. The board is nested lists (jobs × crews ×
-  customers), which is where N+1 turns 1 query into hundreds.
+  is a bug, not a TODO. The board is a nested list, jobs resolving their
+  crew, which is where N+1 turns 1 query into hundreds.
 - Thin resolvers: validate input, call a service, return. Business logic
   lives in `services/`. Validation means parsing the input through a
   Pydantic model, not a hand-rolled `if`/`raise` (ADR-009).
+- Foreign key columns are exposed as GraphQL `ID`, not the `Int`
+  graphene-sqlalchemy infers by default. Leaving it as `Int` makes
+  `job.crewId` serialize as `8` while `crew.id` serializes as `"8"` —
+  same value, different type, and any client-side `===` between them
+  silently never matches (see `schema/types.py`, `JobType.crew_id`).
 - The server is the source of truth on conflict. The client may predict;
   the server decides, always.
 - Mutations return a payload with `errors: [Error!]`, they never throw a

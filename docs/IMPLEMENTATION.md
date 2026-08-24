@@ -146,16 +146,31 @@ don't.
 
 ### Phase 3 — Static UI (no drag yet)
 
-- [ ] `ui/Board.tsx`, `ui/DayTabs.tsx`, `ui/CrewColumn.tsx`, `ui/JobBlock.tsx`
-- [ ] `data/queries.ts`: the Apollo `board` query, using entrepta for the
+- [x] `ui/Board.tsx`, `ui/DayTabs.tsx`, `ui/CrewColumn.tsx`, `ui/JobBlock.tsx`
+- [x] `data/queries.ts`: the Apollo `board` query, using entrepta for the
       visual components (colour, type, `ivy` theme)
-- [ ] The board renders 3 days as tabs, manual switch (click) works
-- [ ] Jobs positioned correctly inside each crew column, via
+- [x] The board renders 3 days as tabs, manual switch (click) works
+- [x] Jobs positioned correctly inside each crew column, via
       `core/geometry.ts`
-- [ ] RTL tests: tab switch, positioning, the query's loading/error states
+- [x] RTL tests: tab switch, positioning, the query's loading/error states
 
-Checks. The board loads real API data and is navigable by click, with no
-drag interaction yet.
+Checks. Confirmed by hand in the browser, not just by the test suite:
+`npm run dev` against seeded data, tabs switch between days, jobs sit at
+the right vertical offset for their start time (the seeded double-booking
+on day 2 visibly overlaps two blocks in the same crew column, which is
+exactly what it's there to prove ahead of Phase 6). 38 Vitest cases total
+across `core/` and the new RTL suite (`Board.test.tsx`,
+`DayTabs.test.tsx`), covering loading, error, success, tab switch, and
+position.
+
+Two bugs the manual pass caught that the type checker didn't:
+`graphene-sqlalchemy` infers a foreign key column as GraphQL `Int`, not
+`ID` — `job.crewId` and `crew.id` serialized as `8` vs `"8"`, so every
+job silently rendered in no column at all (fixed in `schema/types.py`,
+noted in this file's `apps/api` rules and in ADR-007). And the entrepta
+CLI's Pages Router assumption put `styles/`, `lib/`, and `components/` at
+the app root instead of under `src/`; moved by hand, documented in the
+`apps/web` rules so the next `npx @entrepta/cli add` doesn't repeat it.
 
 ### Phase 4 — Drag within the same day
 

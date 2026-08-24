@@ -153,10 +153,10 @@ to demonstrate the behaviour.
 
 ## ADR-007 — DataLoader mandatory on every list resolver
 
-Context: the board loads jobs, crews, and customers together in a single
-GraphQL query. Without care, each relation resolver fires one SQL query per
-list item (N+1); with dozens of jobs on screen, that becomes hundreds of
-queries.
+Context: the board loads jobs and crews together in a single GraphQL
+query, each job resolving its own crew. Without care, that relation
+resolver fires one SQL query per job in the list (N+1); with dozens of
+jobs on screen, that becomes hundreds of queries.
 
 Decision: every resolver that resolves a list of relations uses a
 DataLoader (batching and a per-request cache). A query-count test enforces

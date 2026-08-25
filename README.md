@@ -10,11 +10,12 @@ easier). Built to prove one thing end to end: what happens when the
 server, not the client, decides who gets a scheduling slot, and the
 client actually recovers when it guessed wrong.
 
-It's a personal project, not a product, and there's no hosted demo yet —
-the API needs a Postgres instance and both deploys need account setup
-that hasn't happened. See "Running locally" below; it's a two-command
-start with Docker. See [docs/GOAL.md](docs/GOAL.md) for what it's for and
-why moving-company dispatch is the example domain, and
+It's a personal project, not a product. **Live:
+[capacity-crew.vercel.app](https://capacity-crew.vercel.app/)** — the API
+runs on Railway's free tier, so the first request after a period of
+inactivity can take 10–20s to wake it up; a reload once it's warm is
+fast. See [docs/GOAL.md](docs/GOAL.md) for what it's for and why
+moving-company dispatch is the example domain, and
 [docs/DECISIONS.md](docs/DECISIONS.md) for the architectural reasoning,
 alternative approaches dropped, and why.
 

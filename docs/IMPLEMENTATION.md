@@ -167,7 +167,8 @@ Two bugs the manual pass caught that the type checker didn't:
 `graphene-sqlalchemy` infers a foreign key column as GraphQL `Int`, not
 `ID` — `job.crewId` and `crew.id` serialized as `8` vs `"8"`, so every
 job silently rendered in no column at all (fixed in `schema/types.py`,
-noted in this file's `apps/api` rules and in ADR-007). And the entrepta
+noted in CLAUDE.md's `apps/api` rules — no ADR, it's a one-line schema
+convention, not an architectural tradeoff). And the entrepta
 CLI's Pages Router assumption put `styles/`, `lib/`, and `components/` at
 the app root instead of under `src/`; moved by hand, documented in the
 `apps/web` rules so the next `npx @entrepta/cli add` doesn't repeat it.
@@ -239,7 +240,9 @@ new `crewId`/`startTime` onto the `Job` entity; the real response, on
 rejection, returns `job: null` (ADR-006, ADR-009's validation-as-data
 pattern) — nothing to write over that entity — and Apollo discards the
 optimistic layer the moment any real response lands, optimistic or not.
-The "rollback" is the absence of a write, not a written-back value.
+The "rollback" is the absence of a write, not a written-back value —
+formalized as ADR-010, once it was clear this wasn't a one-off but the
+actual shape CLAUDE.md's rollback rule needed to describe.
 
 The `moveJob` call moved out of `Board.tsx` into `data/use-move-job.ts`,
 not for reuse but for testability: dnd-kit's collision detection needs

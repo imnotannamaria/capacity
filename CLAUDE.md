@@ -45,8 +45,10 @@ doesn't serve that story is out of scope (see `docs/DECISIONS.md`).
 
 Four things carry the weight, and each one is a rule, not a nice-to-have:
 
-- Optimistic update with an explicit rollback path. A mutation that only
-  handles success is the happy-path demo this project exists to not be.
+- Optimistic update with a guaranteed, visible response to rejection —
+  the block returns to where it was and a toast says why. A mutation that
+  only handles success is the happy-path demo this project exists to not
+  be.
 - Cross-day drag through tab auto-switch, plus the keyboard equivalent.
 - No N+1: every list resolver batches through a DataLoader.
 - The full test pyramid, with the unhappy paths tested, not just the
@@ -173,8 +175,12 @@ the collision test (and the auto-switch test) don't need a DOM to run.
 - No auto-switch logic outside `core/dragAutoSwitch.ts`.
 - Every `ui/` component takes props and renders. Business logic in a
   `useEffect` is a sign it's in the wrong place.
-- Every mutation has an optimistic update *and* an explicit rollback path.
-  The rollback is the point; skipping it is skipping the project.
+- Every mutation has an optimistic update *and* a visible response to a
+  server rejection: the block back where it was, plus a toast. How that
+  happens isn't prescribed — `moveJob` needs no rollback code at all,
+  because a rejection's `job` is `null` and Apollo never writes over the
+  entity (see ADR-010) — but the outcome the user sees is not optional.
+  Skipping it is skipping the project.
 - dnd-kit covers mouse and touch, and the keyboard movement it already
   gives (arrows to move, space to confirm) stays on, don't disable it.
   The cross-day keyboard shortcut is mandatory, not optional (ADR-003).
@@ -304,11 +310,16 @@ apply to the diff in front of you isn't a finding.
 
 - Optimistic and rollback — the one worth reading the diff twice for,
   because it's the whole project (see "The point of the project"). Every
-  mutation has an `optimisticResponse` *and* an explicit rollback path
-  *and* an error toast. The tell is a mutation that writes the cache on
-  success and does nothing on failure: that's the happy-path demo this
-  project exists to not be. A `moveJob` that assumes the server will accept
-  is a bug even when the server does accept.
+  mutation has an `optimisticResponse` *and* a visible response to
+  rejection: the block back where it was, plus an error toast. That does
+  *not* mean grep for a hand-written rollback write — `moveJob`'s own
+  correct implementation has none (ADR-010: a rejection's `job` is `null`,
+  so there's nothing for Apollo to write over the optimistic layer with,
+  and the absence of a write *is* the rollback). The actual tell is a
+  mutation that writes the cache on success and does nothing — no toast, no
+  reversion — on failure: that's the happy-path demo this project exists to
+  not be. A `moveJob` that assumes the server will accept is a bug even
+  when the server does accept.
 - Server decides, client predicts — the client's local collision
   pre-check is feedback, never the verdict. A diff where the client rejects
   a move the server would allow, or persists one the server would reject,
@@ -375,7 +386,7 @@ apply to the diff in front of you isn't a finding.
   diff.
 - Responsive — code-level checks only: wide boards scroll rather than
   reflow, and the layout survives a narrow viewport. Hand the visual pass to
-  Anna, never drive a browser.
+  the author, never drive a browser.
 
 **What the checks cannot see.** Drag feel, the auto-switch threshold timing,
 and whether a rollback reads as smooth or as a flicker are not measured by

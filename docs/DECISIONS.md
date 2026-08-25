@@ -244,9 +244,9 @@ or skipped, which pushes a malformed value straight into SQLAlchemy.
 
 Decision: every mutation input is parsed through a Pydantic model in
 `services/` before it reaches the database. A validation failure becomes a
-structured entry in the mutation's `errors: [Error!]` payload (ADR-007's
-own rule: never a raw exception at GraphQL), not an exception that
-resolvers have to remember to catch.
+structured entry in the mutation's `errors: [Error!]` payload (CLAUDE.md's
+mutation-shape rule: never a raw exception at GraphQL), not an exception
+that resolvers have to remember to catch.
 
 Dropped:
 - Hand-rolled validation per resolver. Works once, drifts every time a
@@ -270,3 +270,43 @@ validating a boundary that doesn't actually exist here, not a safety net
 against real drift. If a form or an external API call enters scope later,
 that's a new decision with its own reasoning, not a default to reach for
 because the backend has Pydantic.
+
+---
+
+## ADR-010 — Rollback is the absence of a write, not written-back code
+
+Context: building Phase 5, the plan was to write explicit rollback code —
+on a rejected `moveJob`, restore the job's prior `crewId`/`startTime` in
+the Apollo cache by hand. That code was never needed. `moveJob`'s
+`optimisticResponse` writes the `Job` entity's new `crewId`/`startTime`;
+on rejection, the real response's `job` is `null` (ADR-009's
+validation-as-data pattern: a rejection is a value, not an exception), so
+there's nothing in the real response to write over that entity with.
+Apollo discards the optimistic layer the instant *any* real response
+lands, successful or not — with no write behind it, the cache is left
+holding only its last real value, which is the job's pre-drag state.
+
+Decision: don't write rollback code for `moveJob`. Rely on Apollo's own
+guarantee — the optimistic layer is always replaced by the real response,
+never merged with it — and on the rejection payload carrying `job: null`
+rather than a mutated job. The mechanism is Apollo's; the only thing this
+codebase owns is making sure a rejection payload never accidentally
+returns a job.
+
+This is why CLAUDE.md's rollback rule (and the code-review checklist
+entry for it) is written as an outcome — the block returns, a toast
+explains why — rather than as "grep for rollback code." A rule written the
+other way would flag this file's own correct implementation as a bug.
+
+Dropped:
+- Writing the prior job state back into the cache inside `onError` /
+  `onCompleted`. Redundant with what Apollo already does automatically,
+  and a second place the "restore to what, exactly" logic could drift
+  from the optimistic write it's supposed to undo.
+
+Consequences: this pattern only holds because a rejected mutation returns
+`job: null` (ADR-009) instead of throwing or returning a mutated job. A
+future mutation that returns a *partial* success (some fields changed, a
+rejection on others) would need to actually think about what "rollback"
+means for it — this ADR is a fact about `moveJob`'s specific payload
+shape, not a universal law that every mutation gets free rollback.

@@ -28,6 +28,9 @@ class MoveJobInput(BaseModel):
         return value
 
 
+MINUTES_PER_DAY = 24 * 60
+
+
 @dataclass
 class MoveJobResult:
     job: Job | None = None
@@ -79,6 +82,14 @@ def move_job(*, job_id: int, crew_id: int, date: date_type, start_time: time_typ
     # exact "IntegrityError reaching the transport" the review flagged.
     if db_session.get(Crew, validated.crew_id) is None:
         return MoveJobResult(errors=["Crew not found"])
+
+    # The board is a single day; a job can't spill past midnight. The client
+    # clamps this (core/geometry.ts, clampStartMinutes), but the server is
+    # the source of truth, so it enforces the same bound instead of trusting
+    # the clamp to have run.
+    start_minutes = validated.start_time.hour * 60 + validated.start_time.minute
+    if start_minutes + job.duration_minutes > MINUTES_PER_DAY:
+        return MoveJobResult(errors=["Job would run past the end of the day"])
 
     conflict = _find_conflict(
         crew_id=validated.crew_id,

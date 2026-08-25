@@ -3,8 +3,9 @@ from datetime import date as date_type
 from datetime import time as time_type
 
 from pydantic import BaseModel, ValidationError, field_validator
+from sqlalchemy.exc import IntegrityError
 
-from models import Job, db_session
+from models import Crew, Job, db_session
 
 
 class MoveJobInput(BaseModel):
@@ -71,6 +72,14 @@ def move_job(*, job_id: int, crew_id: int, date: date_type, start_time: time_typ
     if job is None:
         return MoveJobResult(errors=["Job not found"])
 
+    # The client-supplied crew_id is never trusted as already valid
+    # (CLAUDE.md, Security). Without this check a non-existent crew_id
+    # passes pydantic (it's a well-formed int) and only fails at commit,
+    # as a foreign-key IntegrityError that would surface as a 500 — the
+    # exact "IntegrityError reaching the transport" the review flagged.
+    if db_session.get(Crew, validated.crew_id) is None:
+        return MoveJobResult(errors=["Crew not found"])
+
     conflict = _find_conflict(
         crew_id=validated.crew_id,
         date=validated.date,
@@ -84,6 +93,14 @@ def move_job(*, job_id: int, crew_id: int, date: date_type, start_time: time_typ
     job.crew_id = validated.crew_id
     job.date = validated.date
     job.start_time = validated.start_time
-    db_session.commit()
+
+    # Defense in depth: the crew was checked above, but any constraint the
+    # DB enforces (now or later) should come back as a structured error,
+    # never a raw IntegrityError at the transport.
+    try:
+        db_session.commit()
+    except IntegrityError:
+        db_session.rollback()
+        return MoveJobResult(errors=["Could not save the move"])
 
     return MoveJobResult(job=job)

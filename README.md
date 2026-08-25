@@ -1,15 +1,22 @@
 # capacity
 
-A small dispatch board: crews and trucks as columns, jobs scheduled
-inside time windows, draggable between crews and between days. Built to
-prove one thing end to end: what happens when the server, not the
-client, decides who gets a scheduling slot, and the client actually
-recovers when it guessed wrong.
+![The capacity dispatch board: three days as tabs, crews as colour-coded columns, jobs as draggable blocks against an hour ruler with a live now-line](docs/capacity.png)
 
-It's a personal project, not a product. See [docs/GOAL.md](docs/GOAL.md)
-for what it's for and why moving-company dispatch is the example domain,
-and [docs/DECISIONS.md](docs/DECISIONS.md) for the architectural
-reasoning, alternative approaches dropped, and why.
+A small dispatch board: crews and trucks as columns, jobs scheduled
+inside time windows, draggable between crews and between days — by mouse,
+touch, **or keyboard** (arrow keys move a picked-up job, `Tab`/`Shift+Tab`
+switches days mid-drag, none of it turned off to make the mouse path
+easier). Built to prove one thing end to end: what happens when the
+server, not the client, decides who gets a scheduling slot, and the
+client actually recovers when it guessed wrong.
+
+It's a personal project, not a product, and there's no hosted demo yet —
+the API needs a Postgres instance and both deploys need account setup
+that hasn't happened. See "Running locally" below; it's a two-command
+start with Docker. See [docs/GOAL.md](docs/GOAL.md) for what it's for and
+why moving-company dispatch is the example domain, and
+[docs/DECISIONS.md](docs/DECISIONS.md) for the architectural reasoning,
+alternative approaches dropped, and why.
 
 ## Stack
 
@@ -26,7 +33,12 @@ cd apps/api && uv run python seed.py && cd ../..
 npm run dev
 ```
 
-The board opens at http://localhost:3000.
+The board opens at http://localhost:3000. No `.env` file is required for
+this: `docker-compose.yml` maps Postgres to `localhost:5434`, and that's
+already the default both apps fall back to when `DATABASE_URL` /
+`NEXT_PUBLIC_API_URL` aren't set (see `apps/api/.env.example` and
+`apps/web/.env.example` if you do need to point at something else, like a
+non-default port or a deployed API).
 
 ## Testing
 
@@ -34,6 +46,13 @@ The board opens at http://localhost:3000.
 npm test                             # vitest + pytest
 npm run test:e2e --workspace=web     # playwright
 ```
+
+`apps/api`'s tests run against the same local Postgres as `npm run dev`
+(there's no separate test database), and every test's teardown deletes
+all crews and jobs to start the next one clean. Running `npm test` after
+seeding for manual exploration wipes that seed data — the board you had
+open goes empty, not broken. Reseed (`cd apps/api && uv run python
+seed.py`) to get it back.
 
 The full pyramid, what each layer covers, and the five non-negotiable
 tests are documented in CLAUDE.md's [Tests](CLAUDE.md#tests) section.
@@ -50,8 +69,9 @@ automates the same scenario with two Playwright browser contexts.
    python seed.py`), then open two browser tabs at
    http://localhost:3000, both on today's date.
 2. In the first tab, drag "Storage pickup" (Crew A) into an empty slot
-   late in the afternoon on Crew B. Confirm the move. The toast, if any,
-   should be silent (no conflict), and the block should land on Crew B.
+   late in the afternoon on Crew B — you may need to scroll the column to
+   reach it, since a day is a full 24h tall. Confirm the move: no toast
+   should appear, and the block should land on Crew B.
 3. Don't reload the second tab. Its Apollo cache still reflects the
    board from before the first tab's move, so Crew B's afternoon still
    looks empty to it.

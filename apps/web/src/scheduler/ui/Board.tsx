@@ -5,6 +5,7 @@ import {
   DragOverlay,
   KeyboardCode,
   KeyboardSensor,
+  MeasuringStrategy,
   pointerWithin,
   PointerSensor,
   rectIntersection,
@@ -46,6 +47,18 @@ const KEYBOARD_CODES = {
   start: [KeyboardCode.Space, KeyboardCode.Enter],
   cancel: [KeyboardCode.Esc],
   end: [KeyboardCode.Space, KeyboardCode.Enter],
+}
+
+// dnd-kit's default measures droppables *while* dragging, which is fine
+// for a pointer drag (the overlay is born under the cursor, so a late
+// measurement is invisible) but flashes on a keyboard pick-up: there's no
+// pointer position to anchor the overlay to, so it's placed from the
+// dragged block's own rect, and if that rect isn't measured yet the
+// overlay pops in at the wrong size/position for a frame before snapping
+// into place. Measuring before the drag starts means the rect is already
+// known the instant Space fires, so there's nothing to snap into.
+const measuring = {
+  droppable: { strategy: MeasuringStrategy.BeforeDragging },
 }
 
 // pointerWithin alone breaks keyboard drags: it reads args.pointerCoordinates,
@@ -249,6 +262,7 @@ export function Board({ dates }: { dates: string[] }) {
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
+      measuring={measuring}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}

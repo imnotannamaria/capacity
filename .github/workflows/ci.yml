@@ -21,3 +21,84 @@ jobs:
       - run: npm run typecheck
 
       - run: npm run lint
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    # apps/api's tests hit a real database on purpose (CLAUDE.md: "the
+    # rollback and two-context tests still exercise the real failure, not
+    # a mock"), so this job needs actual Postgres, not a mock.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: capacity
+          POSTGRES_PASSWORD: capacity
+          POSTGRES_DB: capacity
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U capacity"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg2://capacity:capacity@localhost:5432/capacity
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: npm ci
+
+      # `turbo run test` fans out to both workspaces: vitest for web,
+      # `uv run pytest -q` for api (see each workspace's package.json).
+      - run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: capacity
+          POSTGRES_PASSWORD: capacity
+          POSTGRES_DB: capacity
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U capacity"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg2://capacity:capacity@localhost:5432/capacity
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: npm ci
+
+      - name: Install Playwright's browser
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts's webServer starts both the Flask API and the
+      # Next dev server itself, and its globalSetup reseeds the database —
+      # this step only needs Postgres already up, which the service above
+      # provides.
+      - run: npm run test:e2e --workspace=web

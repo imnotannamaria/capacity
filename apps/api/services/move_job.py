@@ -3,8 +3,9 @@ from datetime import date as date_type
 from datetime import time as time_type
 
 from pydantic import BaseModel, ValidationError, field_validator
+from sqlalchemy.exc import IntegrityError
 
-from models import Job, db_session
+from models import Crew, Job, db_session
 
 
 class MoveJobInput(BaseModel):
@@ -25,6 +26,9 @@ class MoveJobInput(BaseModel):
         if value.minute % 15 != 0 or value.second != 0:
             raise ValueError("start_time must fall on a 15-minute slot boundary")
         return value
+
+
+MINUTES_PER_DAY = 24 * 60
 
 
 @dataclass
@@ -50,9 +54,17 @@ def _times_overlap(start_a: time_type, duration_a: int, start_b: time_type, dura
 def _find_conflict(
     *, crew_id: int, date: date_type, start_time: time_type, duration_minutes: int, exclude_job_id: int
 ) -> Job | None:
+    # with_for_update() row-locks the crew/day's existing jobs for the rest
+    # of the transaction, so a second move of an existing job into the same
+    # lane can't slip its check between this read and our commit. It does
+    # not stop two brand-new overlapping rows racing in (a phantom FOR
+    # UPDATE can't see) — closing that fully needs a Postgres EXCLUDE
+    # constraint; see DECISIONS.md (ADR-006). moveJob only updates existing
+    # rows, so this covers the reachable case.
     candidates = (
         db_session.query(Job)
         .filter(Job.crew_id == crew_id, Job.date == date, Job.id != exclude_job_id)
+        .with_for_update()
         .all()
     )
     for candidate in candidates:
@@ -71,6 +83,22 @@ def move_job(*, job_id: int, crew_id: int, date: date_type, start_time: time_typ
     if job is None:
         return MoveJobResult(errors=["Job not found"])
 
+    # The client-supplied crew_id is never trusted as already valid
+    # (CLAUDE.md, Security). Without this check a non-existent crew_id
+    # passes pydantic (it's a well-formed int) and only fails at commit,
+    # as a foreign-key IntegrityError that would surface as a 500 — the
+    # exact "IntegrityError reaching the transport" the review flagged.
+    if db_session.get(Crew, validated.crew_id) is None:
+        return MoveJobResult(errors=["Crew not found"])
+
+    # The board is a single day; a job can't spill past midnight. The client
+    # clamps this (core/geometry.ts, clampStartMinutes), but the server is
+    # the source of truth, so it enforces the same bound instead of trusting
+    # the clamp to have run.
+    start_minutes = validated.start_time.hour * 60 + validated.start_time.minute
+    if start_minutes + job.duration_minutes > MINUTES_PER_DAY:
+        return MoveJobResult(errors=["Job would run past the end of the day"])
+
     conflict = _find_conflict(
         crew_id=validated.crew_id,
         date=validated.date,
@@ -84,6 +112,14 @@ def move_job(*, job_id: int, crew_id: int, date: date_type, start_time: time_typ
     job.crew_id = validated.crew_id
     job.date = validated.date
     job.start_time = validated.start_time
-    db_session.commit()
+
+    # Defense in depth: the crew was checked above, but any constraint the
+    # DB enforces (now or later) should come back as a structured error,
+    # never a raw IntegrityError at the transport.
+    try:
+        db_session.commit()
+    except IntegrityError:
+        db_session.rollback()
+        return MoveJobResult(errors=["Could not save the move"])
 
     return MoveJobResult(job=job)

@@ -187,3 +187,57 @@ def test_rejects_a_move_of_a_job_that_does_not_exist():
     payload = move(999_999, crew_id, date(2026, 1, 1), time(9, 0))
 
     assert payload["errors"] == [{"message": "Job not found"}]
+
+
+def test_rejects_a_move_that_would_run_past_the_end_of_the_day():
+    crew = Crew(name="Crew A")
+    db_session.add(crew)
+    db_session.flush()
+    crew_id = crew.id
+
+    job = Job(
+        crew_id=crew_id,
+        title="Long job",
+        date=date(2026, 1, 1),
+        start_time=time(9, 0),
+        duration_minutes=120,
+    )
+    db_session.add(job)
+    db_session.commit()
+    job_id = job.id
+
+    # 23:00 + 120 min would end at 25:00 — past midnight. The server must
+    # reject it even though the start time is on a valid 15-minute slot.
+    payload = move(job_id, crew_id, date(2026, 1, 1), time(23, 0))
+
+    assert len(payload["errors"]) == 1
+    assert "past the end of the day" in payload["errors"][0]["message"]
+    reloaded = db_session.get(Job, job_id)
+    assert reloaded.start_time == time(9, 0), "a rejected move must not touch the row"
+
+
+def test_rejects_a_move_to_a_nonexistent_crew():
+    crew = Crew(name="Crew A")
+    db_session.add(crew)
+    db_session.flush()
+    crew_id = crew.id
+
+    job = Job(
+        crew_id=crew_id,
+        title="Test job",
+        date=date(2026, 1, 1),
+        start_time=time(9, 0),
+        duration_minutes=60,
+    )
+    db_session.add(job)
+    db_session.commit()
+    job_id = job.id
+
+    # A well-formed but non-existent crew_id must come back as a structured
+    # error, not a foreign-key IntegrityError at commit (which would 500).
+    payload = move(job_id, 999_999, date(2026, 1, 1), time(9, 0))
+
+    assert payload["errors"] == [{"message": "Crew not found"}]
+    assert payload["job"] is None
+    reloaded = db_session.get(Job, job_id)
+    assert reloaded.crew_id == crew_id, "a rejected move must not touch the row"

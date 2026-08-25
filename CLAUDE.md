@@ -108,20 +108,26 @@ capacity/
 │   ├── web/
 │   │   ├── entrepta.json                # entrepta CLI config (theme, aliases)
 │   │   └── src/
-│   │       ├── app/
+│   │       ├── app/                    # layout (fonts, metadata, analytics), page,
+│   │       │                           #   loading/error/not-found/global-error, icon.svg
 │   │       ├── components/
 │   │       │   ├── entrepta/            # copied in by the entrepta CLI, owned code
-│   │       │   └── apollo-provider.tsx
+│   │       │   ├── apollo-provider.tsx
+│   │       │   ├── app-header.tsx           # wordmark (h1), date, mode toggle
+│   │       │   ├── mode-toggle.tsx          # dark/light, <html data-mode>, no-FOUC
+│   │       │   ├── button.tsx               # shared button/link style (cva)
+│   │       │   └── empty-state.tsx          # framed icon + copy, reused by error/404/empty
 │   │       ├── lib/
 │   │       │   ├── utils.ts                 # cn(), from entrepta
 │   │       │   └── apollo-client.ts
 │   │       ├── scheduler/
 │   │       │   ├── core/                # no JSX, pure logic, testable with no DOM
-│   │       │   │   ├── geometry.ts          # time ↔ vertical position, snap, day maths
+│   │       │   │   ├── geometry.ts          # time ↔ vertical position, snap, day maths, hour marks, now
 │   │       │   │   ├── collision.ts         # local conflict, pre-check
 │   │       │   │   ├── dragAutoSwitch.ts    # hover threshold, tab switch
 │   │       │   │   └── types.ts
-│   │       │   ├── ui/                  # Board, DayTabs, CrewColumn, JobBlock
+│   │       │   ├── ui/                  # Board, DayTabs, BoardGrid, CrewColumn, JobBlock,
+│   │       │   │                        #   TimeRuler, BoardSkeleton, crewColor, useNowMinutes
 │   │       │   └── data/                # queries, mutations, optimistic config
 │   │       └── ...
 │   └── api/

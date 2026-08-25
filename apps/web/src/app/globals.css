@@ -1,9 +1,25 @@
-@import url("https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600&display=swap");
+/* Fonts are loaded and self-hosted by next/font (see app/layout.tsx), which
+   exposes them as --font-bricolage / --font-dm-sans / --font-jetbrains-mono
+   on <body>. The semantic --font-* tokens below point at those. */
 
 @import "tailwindcss";
 
 /* Scan all project TS/TSX files so Tailwind generates classes from components */
 @source "../**/*.{ts,tsx}";
+
+/* ============================================================
+   TYPE SIZE SCALE (Tailwind v4 @theme)
+   The dense end the interface actually needs. 12/14/16/18/20/24 use
+   Tailwind's defaults (text-xs … text-2xl); these two fill the smaller
+   steps a data-dense board relies on, so nothing reaches for a one-off
+   text-[10px] again. Decide the scale once, here.
+   ============================================================ */
+@theme {
+  --text-micro: 0.625rem; /* 10px — mono micro-labels (ruler, counts) */
+  --text-micro--line-height: 1.2;
+  --text-tiny: 0.6875rem; /* 11px — mono secondary labels */
+  --text-tiny--line-height: 1.3;
+}
 
 /* ============================================================
    PRIMITIVE TOKENS
@@ -114,13 +130,44 @@
   --motion-slow: 320ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  /* expressive easings for entrances and micro-interactions */
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ============================================================
      TYPOGRAPHY
+     Display: Bricolage Grotesque — characterful, editorial headings.
+     Body:    DM Sans — warm, legible, modern.
+     Mono:    JetBrains Mono — tabular data only (times, ids, counts).
+     next/font sets the --font-* source vars on <body>; these map the
+     semantic names onto them with system fallbacks.
      ============================================================ */
-  --font-serif: "Newsreader", "Times New Roman", serif;
-  --font-mono: "JetBrains Mono", "SF Mono", Menlo, monospace;
-  --font-sans: "Inter", -apple-system, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), "Times New Roman", serif;
+  --font-sans: var(--font-dm-sans), -apple-system, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "SF Mono", Menlo, monospace;
+  /* kept as an alias so any lingering reference resolves to the display face */
+  --font-serif: var(--font-display);
+
+  /* ============================================================
+     CREW ACCENTS — one stable hue per lane (see ui/crewColor.ts).
+     Vivid but cohesive; the ivy green sits among them as crew-0.
+     ============================================================ */
+  --crew-0: #35a365; /* ivy */
+  --crew-1: #38bdf8; /* sky */
+  --crew-2: #f59e0b; /* amber */
+  --crew-3: #8b5cf6; /* violet */
+  --crew-4: #fb7185; /* rose */
+  --crew-5: #2dd4bf; /* teal */
+  --crew-6: #818cf8; /* indigo */
+  --crew-7: #a3e635; /* lime */
+  --crew-0-soft: rgba(53, 163, 101, 0.14);
+  --crew-1-soft: rgba(56, 189, 248, 0.14);
+  --crew-2-soft: rgba(245, 158, 11, 0.14);
+  --crew-3-soft: rgba(139, 92, 246, 0.14);
+  --crew-4-soft: rgba(251, 113, 133, 0.14);
+  --crew-5-soft: rgba(45, 212, 191, 0.14);
+  --crew-6-soft: rgba(129, 140, 248, 0.14);
+  --crew-7-soft: rgba(163, 230, 53, 0.14);
 }
 
 /* ============================================================
@@ -143,11 +190,17 @@
   body {
     background: var(--bg-canvas);
     color: var(--fg-primary);
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Tabular figures everywhere numbers line up in a column (times, counts). */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
   button {
@@ -193,41 +246,43 @@
    ============================================================ */
 
 .t-display-xl {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 80px;
   line-height: 0.95;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .t-display-lg {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 64px;
   line-height: 1;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .t-display-md {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 40px;
   line-height: 1.1;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .t-heading-lg {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 24px;
   line-height: 1.3;
-  font-weight: 400;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .t-heading-md {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 20px;
   line-height: 1.4;
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .t-body-lg {
@@ -373,6 +428,37 @@ button:focus-visible,
   100% {
     background-position: -200% 0;
   }
+}
+
+/* Entrance: columns and blocks rise into place on first paint. Paired with
+   an inline animation-delay for a staggered reveal (see CrewColumn/JobBlock). */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* The now-line's dot breathes so the eye catches "this is live". Opacity
+   only — GPU-composited, no per-frame paint like an animated box-shadow. */
+@keyframes now-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* A single utility the UI opts into; respects reduced-motion via the block
+   below, which zeroes every animation-duration globally. */
+.animate-rise-in {
+  animation: rise-in var(--motion-slow) var(--ease-out-quint) both;
 }
 
 /* ============================================================

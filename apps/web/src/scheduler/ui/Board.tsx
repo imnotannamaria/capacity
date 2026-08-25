@@ -17,8 +17,12 @@ import {
 } from "@dnd-kit/core"
 import { useQuery } from "@apollo/client/react"
 import { useEffect, useRef, useState } from "react"
-import { Skeleton } from "@/components/entrepta/skeleton"
+import { AlertTriangle, RefreshCw } from "lucide-react"
+import { Button } from "@/components/button"
+import { EmptyState } from "@/components/empty-state"
 import { cn } from "@/lib/utils"
+import { crewAccent } from "./crewColor"
+import { BoardSkeleton } from "./BoardSkeleton"
 import { createDragAutoSwitch, type DragAutoSwitch } from "../core/dragAutoSwitch"
 import {
   clampStartMinutes,
@@ -58,17 +62,32 @@ const collisionDetection: CollisionDetection = (args) => {
 }
 
 function DragPreview({ job, conflict }: { job: Job; conflict: boolean }) {
+  const accent = crewAccent(job.crewId)
   return (
     <div
       className={cn(
-        "w-[176px] cursor-grabbing overflow-hidden rounded-[var(--radius-sm)] border px-2 py-1 text-[var(--fg-primary)] shadow-lg",
-        conflict
-          ? "border-[var(--status-error)] bg-[var(--status-error-soft)]"
-          : "border-[var(--fg-brand)] bg-[var(--bg-surface-elevated)]",
+        "relative w-[184px] rotate-[1.5deg] cursor-grabbing overflow-hidden rounded-[var(--radius-sm)] border pl-2.5 pr-2 py-1 text-[var(--fg-primary)]",
+        "shadow-[0_16px_40px_rgba(0,0,0,0.45)]",
+        conflict && "border-[var(--status-error)]",
       )}
-      style={{ height: durationToHeight(job.durationMinutes) }}
+      style={{
+        height: durationToHeight(job.durationMinutes),
+        backgroundColor: conflict ? "var(--status-error-soft)" : accent.soft,
+        borderColor: conflict ? "var(--status-error)" : accent.solid,
+      }}
     >
-      <p className="truncate font-mono text-[11px] leading-tight">{job.title}</p>
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{ backgroundColor: conflict ? "var(--status-error)" : accent.solid }}
+      />
+      <p className="flex items-center gap-1 truncate text-xs font-medium leading-tight">
+        {conflict && (
+          <AlertTriangle size={11} className="shrink-0 text-[var(--status-error)]" aria-hidden />
+        )}
+        <span className="truncate">{job.title}</span>
+      </p>
+      {conflict && <span className="sr-only">Conflict: overlaps another job</span>}
     </div>
   )
 }
@@ -78,7 +97,7 @@ export function Board({ dates }: { dates: string[] }) {
   const [activeJob, setActiveJob] = useState<Job | null>(null)
   const [dragConflict, setDragConflict] = useState(false)
 
-  const { data, loading, error } = useQuery<BoardQueryData, BoardQueryVariables>(BOARD_QUERY, {
+  const { data, loading, error, refetch } = useQuery<BoardQueryData, BoardQueryVariables>(BOARD_QUERY, {
     variables: { dates },
   })
 
@@ -196,18 +215,28 @@ export function Board({ dates }: { dates: string[] }) {
   }
 
   if (loading) {
-    return (
-      <div role="status" aria-label="Loading board" className="flex flex-col gap-2 p-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    )
+    return <BoardSkeleton />
   }
 
   if (error) {
     return (
-      <div role="alert" className="p-4 font-mono text-[13px] text-[var(--status-error-fg)]">
-        Could not load the board: {error.message}
+      <div role="alert" className="flex min-h-0 flex-1 flex-col items-center justify-center px-4">
+        <EmptyState
+          icon={AlertTriangle}
+          tone="error"
+          title="Couldn't load the board"
+          description="The dispatch API didn't answer. This is usually the server being down or unreachable, not your data — nothing was lost."
+        >
+          <Button onClick={() => void refetch()}>
+            <RefreshCw size={15} aria-hidden />
+            Try again
+          </Button>
+        </EmptyState>
+        {error.message && (
+          <p className="mt-4 max-w-[46ch] text-center font-mono text-tiny text-[var(--fg-muted)]">
+            {error.message}
+          </p>
+        )}
       </div>
     )
   }

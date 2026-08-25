@@ -35,17 +35,40 @@ async def _execute(query, variables):
 
 @app.post("/graphql")
 def graphql():
-    body = request.get_json(force=True)
-    query = body.get("query")
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not body.get("query"):
+        return jsonify({"errors": ["Malformed request: a 'query' string is required"]}), 400
+
+    query = body["query"]
     variables = body.get("variables")
 
     result = asyncio.run(_execute(query, variables))
 
     response = {"data": result.data}
     if result.errors:
-        response["errors"] = [str(error) for error in result.errors]
+        response["errors"] = [_safe_error(error) for error in result.errors]
 
     return jsonify(response)
+
+
+def _safe_error(error):
+    """Keep raw exception text out of the response.
+
+    A GraphQL-level error (a bad query, an unknown field) has no
+    `original_error` and is safe to surface — the client needs to see it to
+    fix the request. A resolver that *threw* carries its exception in
+    `original_error`; that text can hold a stack, a SQL statement, or a
+    connection string, so it's logged server-side and replaced with a
+    generic message. Business-rule errors never reach here: they ride the
+    mutation payload's `errors` field, not the transport (see
+    schema/types.py, `Error`).
+    """
+    original = getattr(error, "original_error", None)
+    if original is None:
+        return str(error)
+
+    app.logger.error("Unhandled resolver error", exc_info=original)
+    return "Internal server error"
 
 
 if __name__ == "__main__":

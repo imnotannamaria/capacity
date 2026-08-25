@@ -178,6 +178,19 @@ That's intentional and documented, not a gap noticed late. The reproduction
 (two browser tabs on the same backend) is documented in the README as a way
 to demonstrate the behaviour.
 
+Concurrency note (added after review): the server's conflict check reads
+the crew/day's jobs and then commits — a check-then-write. Under the
+default single gunicorn worker, requests serialise, so the second move
+always sees the first's committed row and is rejected correctly. If the
+API is ever scaled to multiple workers or threads, two *simultaneous*
+requests could both pass the check before either commits. The conflict
+query now takes a `SELECT ... FOR UPDATE` row lock, which closes the case
+where an existing job is moved into an already-occupied lane. Fully
+closing it for every interleaving (including two brand-new overlapping
+rows) would need a Postgres `EXCLUDE` constraint over `(crew_id, date,
+time-range)` with `btree_gist`; that's out of scope for v1's single-writer
+assumption but is the intended path if this ever runs multi-writer.
+
 ---
 
 ## ADR-007 — DataLoader mandatory on every list resolver

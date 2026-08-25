@@ -54,9 +54,17 @@ def _times_overlap(start_a: time_type, duration_a: int, start_b: time_type, dura
 def _find_conflict(
     *, crew_id: int, date: date_type, start_time: time_type, duration_minutes: int, exclude_job_id: int
 ) -> Job | None:
+    # with_for_update() row-locks the crew/day's existing jobs for the rest
+    # of the transaction, so a second move of an existing job into the same
+    # lane can't slip its check between this read and our commit. It does
+    # not stop two brand-new overlapping rows racing in (a phantom FOR
+    # UPDATE can't see) — closing that fully needs a Postgres EXCLUDE
+    # constraint; see DECISIONS.md (ADR-006). moveJob only updates existing
+    # rows, so this covers the reachable case.
     candidates = (
         db_session.query(Job)
         .filter(Job.crew_id == crew_id, Job.date == date, Job.id != exclude_job_id)
+        .with_for_update()
         .all()
     )
     for candidate in candidates:

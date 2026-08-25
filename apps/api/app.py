@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -8,7 +9,18 @@ from models import db_session
 from schema import schema
 
 app = Flask(__name__)
-CORS(app)
+
+# There's no auth (ADR-004), so the mutation surface is only as private as
+# the browsers allowed to call it. A wide-open CORS policy would let any
+# site on the internet move jobs on the board. Lock it to the known
+# frontend origin(s); FRONTEND_ORIGIN is a comma-separated list so a
+# preview deploy and production can both be allowed.
+_frontend_origins = [
+    origin.strip()
+    for origin in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+CORS(app, origins=_frontend_origins)
 
 
 @app.teardown_appcontext

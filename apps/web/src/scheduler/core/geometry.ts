@@ -56,6 +56,43 @@ export function clampStartMinutes(startMinutes: number, durationMinutes: number)
 }
 
 /**
+ * The hours worth drawing a gridline and a ruler label for: one mark per
+ * hour across the whole day. Each carries its own vertical offset so the
+ * UI never multiplies an hour by PIXELS_PER_MINUTE by hand (that number is
+ * this file's secret, see PIXELS_PER_MINUTE).
+ */
+export function getHourMarks(): { hour: number; top: number; label: string }[] {
+  return Array.from({ length: 25 }, (_, hour) => ({
+    hour,
+    top: minutesToPosition(hour * MINUTES_PER_HOUR),
+    label: `${String(hour).padStart(2, "0")}:00`,
+  }))
+}
+
+/**
+ * A dispatch day starts before dawn on paper but the work doesn't. This is
+ * the hour the board scrolls to on mount, so a full 24h column opens on the
+ * part people actually use instead of on empty small-hours.
+ */
+export const BUSINESS_START_HOUR = 6
+
+/** Vertical offset, in pixels, of the business-hours start — the mount scroll target. */
+export function businessStartPosition(): number {
+  return minutesToPosition(BUSINESS_START_HOUR * MINUTES_PER_HOUR)
+}
+
+/**
+ * Minutes since local midnight for a given instant, clamped to the day.
+ * Client-only by construction: the caller passes the `Date`, so the one
+ * non-deterministic read stays out of this pure function and out of any
+ * server render (a now-line rendered on the server is a hydration mismatch
+ * waiting for the clock to tick between render and paint).
+ */
+export function nowToMinutes(now: Date): number {
+  return Math.min(now.getHours() * MINUTES_PER_HOUR + now.getMinutes(), MINUTES_PER_DAY)
+}
+
+/**
  * Formats a `Date` as "YYYY-MM-DD" using its local year/month/day, then
  * re-anchors through `Date.UTC` before printing. `date.toISOString()`
  * alone would read the date back through UTC, which silently shifts to

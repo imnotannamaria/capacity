@@ -69,7 +69,7 @@ describe("Board", () => {
       },
     ])
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/could not load the board/i)
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't load the board/i)
   })
 
   it("switches which day's jobs are visible when a tab is clicked", async () => {

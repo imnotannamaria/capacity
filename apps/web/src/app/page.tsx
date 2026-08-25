@@ -1,4 +1,5 @@
-import { getNavigableDates } from "@/scheduler/core/geometry"
+import { AppHeader } from "@/components/app-header"
+import { formatDayLabel, getNavigableDates } from "@/scheduler/core/geometry"
 import { Board } from "@/scheduler/ui/Board"
 
 // "Today" changes daily; caching this page would freeze it at whatever
@@ -9,8 +10,11 @@ export default function Home() {
   const dates = getNavigableDates(new Date())
 
   return (
-    <main className="min-h-screen bg-[var(--bg-canvas)]">
-      <Board dates={dates} />
-    </main>
+    <div className="flex min-h-screen flex-col bg-[var(--bg-canvas)]">
+      <AppHeader today={formatDayLabel(dates[0])} />
+      <main className="flex min-h-0 flex-1 flex-col">
+        <Board dates={dates} />
+      </main>
+    </div>
   )
 }

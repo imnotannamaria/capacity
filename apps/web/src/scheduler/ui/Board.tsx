@@ -154,6 +154,31 @@ export function Board({ dates }: { dates: string[] }) {
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [activeJob, dates])
 
+  // Holding Space auto-repeats at the OS level, and dnd-kit's
+  // KeyboardSensor never checks event.repeat: every repeated keydown for
+  // a code in `end` (Space, here) re-triggers a drop, and because the
+  // same code is also in `start`, the very next repeat can re-activate a
+  // fresh pick-up — a drop/pick-up loop for as long as the key stays
+  // down, which is what shows up as the overlay flickering. Swallowing
+  // repeats for Space/Enter/Esc at the capture phase, before dnd-kit's
+  // own document-level listener (attached in bubble phase) ever sees
+  // them, leaves a held key doing nothing but its one real press. Arrow
+  // keys are untouched: holding one to keep nudging the job is intended.
+  useEffect(() => {
+    if (!activeJob) return
+
+    const suppressedCodes: string[] = [KeyboardCode.Space, KeyboardCode.Enter, KeyboardCode.Esc]
+
+    function suppressKeyRepeat(event: KeyboardEvent) {
+      if (event.repeat && suppressedCodes.includes(event.code)) {
+        event.stopImmediatePropagation()
+      }
+    }
+
+    document.addEventListener("keydown", suppressKeyRepeat, true)
+    return () => document.removeEventListener("keydown", suppressKeyRepeat, true)
+  }, [activeJob])
+
   function candidatePlacement(event: DragMoveEvent | DragEndEvent, job: Job) {
     const startMinutes = timeToMinutes(job.startTime)
     const rawStartMinutes = startMinutes + positionToMinutes(event.delta.y)
